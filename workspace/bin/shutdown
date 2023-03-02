@@ -1,0 +1,13 @@
+#!/bin/bash 
+# Copyright 2021 Maya Global Solutions Incorporated
+#
+# This source code is proprietary and confidential. No part of
+# this source code may be disclosed in any manner to a third
+# party without the prior written consent of Inspeed Networks
+# Incorporated. 
+
+# Maya openWrt shutdown utility
+#
+poweroff
+
+

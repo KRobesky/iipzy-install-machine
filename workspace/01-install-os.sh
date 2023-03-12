@@ -137,6 +137,9 @@ function InstallNeededPackages
 	opkg install curl
 	opkg install libcurl4
 	opkg install wget-ssl
+	opkg install procps-ng-vmstat
+	opkg install tcpdump
+	opkg install zoneinfo-all
 
 	# -- tar that works
 	echo =================================== 
@@ -149,12 +152,14 @@ function InstallNeededPackages
 	echo "*** remove built-in web server"
 	echo =================================== 
 	opkg remove uhttpd --force-depends
+	rm -f /etc/config/uhttpd.
 
 	# -- remove adblock
 	echo =================================== 
 	echo "*** remove adblock"
 	echo =================================== 
 	opkg remove adblock --force-depends
+	rm -f /etc/config/uhttpd.
 
 	# -- disable firewall
 	echo =================================== 
@@ -346,6 +351,48 @@ function ProcessArguments # see below for the options
 	done
 }
 
+function Setup_rc_local
+{
+	echo =================================== 
+	echo 'Setting up rc.local ...'
+	echo =================================== 
+
+	#//?? TODO replace with sed...
+	cat <<-EOF > /etc/rc.local
+		# Put your custom commands here that should be executed once
+		# the system init finished. By default this file does nothing.
+
+		/usr/bin/lcd2usb_echo &
+
+		board=$(cat /tmp/sysinfo/board_name | cut -d , -f2)
+		if [ ! -e /etc/firstboot_${board} ]; then
+		    /root/setup.sh
+		    touch /etc/firstboot_${board}
+		fi
+		/bin/mount -a
+
+		#iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+		# NB:  For debugging, link /var/log to permanent storage
+		echo "running rc.local setting up permanent log dirs..." > /root/rc_local.txt
+		echo ===========================================
+		echo 'Setting up logging to permanent directory'
+		echo ===========================================
+		mkdir /per
+		mkdir /per/log
+		mkdir /per/log/iipzy
+
+		mv /var/log /var/log.org
+		ln -s /per/log /var/log
+
+##--		iqs-startup
+
+		echo "running rc.local ..." >> /root/rc_local.txt
+
+		exit 0
+	EOF
+}
+
 function SetupBasicNetworking 
 {
 	echo =================================== 
@@ -374,63 +421,38 @@ function SetupBasicNetworking
 		        option ifname 'eth0'
 	EOF
 
-	# add centos style config scripts for core software.
-
-	mkdir -p /etc/sysconfig/network-scripts
-
-	cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-br0
-		DEVICE=br0
-		BOOTPROTO=dhcp
-		ONBOOT=yes
-		TYPE=Bridge
-	EOF
-
-	cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-eth0
-		DEVICE=eth0
-		TYPE=Ethernet
-		BOOTPROTO=none
-		ONBOOT=yes
-		BRIDGE=br0
-	EOF
-
-	cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-eth1
-		DEVICE=eth1
-		TYPE=Ethernet
-		BOOTPROTO=none
-		ONBOOT=yes
-		BRIDGE=br0
-	EOF
+##--	# add centos style config scripts for core software.
+##--
+##--	mkdir -p /etc/sysconfig/network-scripts
+##--
+##--	cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-br0
+##--		DEVICE=br0
+##--		BOOTPROTO=dhcp
+##--		ONBOOT=yes
+##--		TYPE=Bridge
+##--	EOF
+##--
+##--	cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-eth0
+##--		DEVICE=eth0
+##--		TYPE=Ethernet
+##--		BOOTPROTO=none
+##--		ONBOOT=yes
+##--		BRIDGE=br0
+##--	EOF
+##--
+##--	cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-eth1
+##--		DEVICE=eth1
+##--		TYPE=Ethernet
+##--		BOOTPROTO=none
+##--		ONBOOT=yes
+##--		BRIDGE=br0
+##--	EOF
 
 	# restart network
 	#service network reload
 	/etc/init.d/network reload
 
 	# ip tables, save rules
-
-	#//?? TODO replace with sed...
-	cat <<-EOF > /etc/rc.local
-		# Put your custom commands here that should be executed once
-		# the system init finished. By default this file does nothing.
-
-		/usr/bin/lcd2usb_echo &
-
-		board=$(cat /tmp/sysinfo/board_name | cut -d , -f2)
-		if [ ! -e /etc/firstboot_${board} ]; then
-		    /root/setup.sh
-		    touch /etc/firstboot_${board}
-		fi
-		/bin/mount -a
-
-		#iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-
-		# NB:  For debugging, link /var/log to permanent storage
-		mv /var/log /var/log-at-boot
-		ln -s /per/log /var/log
-
-		iqs-startup
-
-		exit 0
-	EOF
 																					
 	## reset ip tables.
 	#insp -d
@@ -440,7 +462,10 @@ function SetupBasicNetworking
 
 function SetupLogging #
 {
-	echo 'Setting up logging to /var/logs/messages'
+	echo =================================== 
+	echo 'Setting up logging to /var/log/messages'
+	echo =================================== 
+
 	sed -i "/option urandom_seed/a \ \ \ \ \ \ \ \ option log_size '1024'" /etc/config/system
 	sed -i "/option urandom_seed/a \ \ \ \ \ \ \ \ option log_remote '0'" /etc/config/system
 	#sed -i "/option urandom_seed/a \ \ \ \ \ \ \ \ option log_file '/var/log/messages'" /etc/config/system
@@ -474,11 +499,12 @@ function SetupLogging #
 function SetupTimezone #
 {
 	echo 'Setting up timezone to UTC'
+	cp -p /etc/config/system /etc/config/system.ORG
 	echo 'UTC' > /etc/TZ
 	# change timezone to UTC
 	sed -i "s/.*option timezone.*/\ \ \ \ \ \ \ \ option timezone 'UTC'/" /etc/config/system
-	# remove zonename
-	sed  -i "/.*option zonename.*/d" /etc/config/system
+	# change zonename to UTC
+	sed -i "s/.*option zonename.*/\ \ \ \ \ \ \ \ option zonename 'UTC'/" /etc/config/system
 	# show current time
 	date
 }
@@ -517,15 +543,19 @@ if ! IsNicUp "$wannic"; then
 	IsNicUp "$wannic" || Error "Network is not up.  Maybe you don't have the WAN plugged in.  Fix and try again." || exit $EXIT_ERROR
 fi
 
-#CreateFolders
+##--CreateFolders
 
 SetupTimezone
 
-SetupLogging
-
 InstallNeededPackages
 
+Setup_rc_local
+
+SetupLogging
+
 #InstallIQSPackages
+
+sync
 
 echo "**********************************************************************"
 echo "**********************************************************************"
@@ -553,7 +583,12 @@ echo "**                                                                  **"
 echo "**********************************************************************"
 echo "**********************************************************************"
 
-#SetupBasicNetworking
+echo =============================================
+echo 'Will reboot after setting up networking'
+echo 'NB: wan ip address will change'
+echo ============================================= 
+
+SetupBasicNetworking
 
 #InstallHacks
 
@@ -563,6 +598,10 @@ echo "**********************************************************************"
 
 touch /root/01-install-os-done.txt
 
+sync
+
 date
+
+reboot
 
 exit $EXIT_OK

@@ -1,0 +1,3 @@
+#!/bin/bash
+echo -n $(cut -c 1-16 <<<  cat /sys/firmware/devicetree/base/serial-number)
+

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+	echo -e "\tusage:   set-timezone timezone-code timezone-name"
+	echo -e "\texample: set-timezone PST8PDT,M3.2.0,M11.1.0 America/Los_Angeles"
+	exit 1
+fi
+
+tz=$1
+zn=''
+IFS='/' read -r -a array <<< "$2"
+arraylim="${#array[@]}"
+let arraylim-=1
+echo "arraylim = $arraylim"
+for part in "${!array[@]}"
+do
+	echo "line $part"
+    echo "${array[$part]}"
+	zn+="${array[$part]}"
+	if [[ $part -lt $arraylim ]]; then
+		zn+="\\/"
+	fi
+done
+
+echo "Setting timezone to $tz"
+echo "$1" > /etc/TZ
+# change timezone
+sed -i "s/.*option timezone.*/\ \ \ \ \ \ \ \ option timezone \'$tz\'/" /etc/config/system
+echo "Setting zonename to $zn"
+# change zonename
+sed -i "s/.*option zonename.*/\ \ \ \ \ \ \ \ option zonename \'$zn\'/" /etc/config/system
+# show current time
+date

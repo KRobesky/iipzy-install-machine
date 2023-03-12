@@ -1,0 +1,15 @@
+#!/bin/bash
+
+id_line=''
+while IFS=" " read -r -a line; 
+do 
+	#printf "%s\n" "${line[@]}"
+	if [[ $line[@] == ID=* ]] ; then
+		id_line=$line
+	fi
+done < /etc/os-release
+os_id=""
+if [[ $id_line != '' ]]; then
+	os_id=$(echo $id_line | cut -c4-99 | tr -d '"')
+fi
+echo -n $os_id

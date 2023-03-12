@@ -62,11 +62,11 @@ declare -r -i EXIT_ERROR=1
 declare -r -i EXIT_OK=0
 declare -r	  SERVICE_PATH="/etc/init.d/"
 
-declare	gitEmail=''
-declare	gitPassword=''
-declare	gitRepo=''
-declare	gitRoot=''
-declare	gitUserName=''
+##--declare	gitEmail=''
+##--declare	gitPassword=''
+##--declare	gitRepo=''
+##--declare	gitRoot=''
+##--declare	gitUserName=''
 
 function ProcessArguments # see below for the options
 {
@@ -126,15 +126,15 @@ function ProcessArguments # see below for the options
 # We assume we're starting after 01-install-os
 #====================================================
 
-ProcessArguments "$@"
+##-- not needed ProcessArguments "$@"
 
 opkg update
 
-echo ====================================
-echo Installing python3
-echo ====================================
-
-opkg install python3
+##--echo ====================================
+##--echo Installing python3
+##--echo ====================================
+##--
+##--opkg install python3
 
 ##--echo ====================================
 ##--echo Set timezone UTC
@@ -211,7 +211,7 @@ echo ====================================
 # 
 # 	- create /var/log/iipzy so that directory is writable by non-root
 # 
-mkdir /var/log/iipzy
+#mkdir /var/log/iipzy
 ##--chown pi:pi /var/log/iipzy
 # 
 # 	- create /etc/iipzy
@@ -225,8 +225,8 @@ echo Install iipzy-pi
 echo ====================================
 #				   `
 cd /home/pi/iipzy-service-a
-git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iipzy-shared.git"
-git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iipzy-pi.git"
+git clone "http://github.com/KRobesky/iipzy-shared.git"
+git clone "http://github.com/KRobesky/iipzy-pi.git"
 
 # 
 # install iipzy-pi stuff
@@ -243,7 +243,7 @@ echo Install iipzy-sentinel-web-build
 echo ====================================
 # 
 cd /home/pi/iipzy-sentinel-web-a
-git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iipzy-sentinel-web-build.git"
+git clone "http://github.com/KRobesky/iipzy-sentinel-web-build.git"
 ##//??# 
 ##//??# install  iipzy-sentinel-web stuff
 ##//??# 
@@ -267,8 +267,8 @@ echo Install iipzy-sentinel-admin
 echo ====================================
 # 
 cd /home/pi/iipzy-sentinel-admin-a
-git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iipzy-shared.git"
-git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iipzy-sentinel-admin.git"
+git clone "http://github.com/KRobesky/iipzy-shared.git"
+git clone "http://github.com/KRobesky/iipzy-sentinel-admin.git"
 # 
 # install  iipzy-sentinel-admin stuff
 # 
@@ -286,8 +286,8 @@ echo Install iipzy-updater
 echo ====================================
 # 
 cd /home/pi/iipzy-updater-a
-git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iipzy-shared.git"
-git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iipzy-updater.git"
+git clone "http://github.com/KRobesky/iipzy-shared.git"
+git clone "http://github.com/KRobesky/iipzy-updater.git"
 # 
 # install  iipzy-updater stuff
 # 
@@ -332,42 +332,16 @@ cd /home/pi/iipzy-service-a/iipzy-pi
 # 
 #//?? already installed - opkg install libpcap-dev
 # 
-npm i pcap
-opkg install arp-scan
+#//?? fails  2023-03-03 npm i pcap
+#//?? installed by 01-install-os.sh opkg install arp-scan
 #//?? not needed - opkg install nbtscan
+# 
 opkg install avahi-utils
 # 
 # For cpu monitoring
 # 
 opkg install sysstat
 #
-##--echo ====================================
-##--echo Build and install iperf3
-##--echo ====================================
-##--# 
-##--# 	- build iperf3 - see https://software.es.net/iperf/building.html
-##--# 
-##--opkg install make
-##--cd /home/pi
-##--git clone "http://$gitUserName:$gitPassword@$gitRepo/$gitRoot/iperf3.git"
-##--cd /home/pi/iperf3
-##--chmod 777 /usr/local/lib
-##--chmod 777 /usr/local/bin
-##--chmod 777 /usr/local/include
-##--chmod 777 /usr/local/share/man
-##--chmod 744 configure
-##--./configure --disable-shared --disable-dependency-tracking
-##--make 
-##--make install
-##--# 
-##--# 	- test
-##--# 
-##--echo ====================================
-##--echo install iperf3
-##--echo ====================================
-##--opkg install iperf
-##--echo "iperf3 $(iperf3 -version)"
-# 
 echo =================================== 
 echo Install Sentinel services.
 echo =================================== 
@@ -412,7 +386,8 @@ chmod 777 $SERVICE_PATH/iipzy-updater-a.service
 chmod 777 $SERVICE_PATH/iipzy-updater-b.service
 $SERVICE_PATH/iipzy-updater-a.service enable
 # 
-
+touch /root/02-install-iipzy-done.txt
+sync
 echo Exiting...
 exit $EXIT_OK
 

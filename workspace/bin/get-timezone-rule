@@ -1,0 +1,8 @@
+#!/bin/bash
+
+tzrule="$(tzif-display /usr/share/zoneinfo/$1 | grep 'general rule')"
+#echo "$tzrule":
+# returns general rule (unparsed): PST8PDT,M3.2.0,M11.1.0
+#         0123456789.123456789.123456789.1234567890.12345...
+echo -n "${tzrule:25:99}"
+

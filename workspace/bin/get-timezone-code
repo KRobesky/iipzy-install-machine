@@ -1,0 +1,7 @@
+#!/bin/bash
+
+tzs=$(uci export system | grep timezone)
+#returns:
+#option timezone 'UTC'
+echo -n "${tzs:18:3}"
+

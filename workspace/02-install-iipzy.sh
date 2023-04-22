@@ -51,7 +51,7 @@
 # 
 # Get this install script
 # 
-# 	git clone http://<username:password>@<git-repository>/iipzy-configs-private.git
+# 	git clone -q http://<username:password>@<git-repository>/iipzy-configs-private.git
 # 
 # ====================================
 # Run this script
@@ -67,6 +67,7 @@ declare -r	  SERVICE_PATH="/etc/init.d/"
 ##--declare	gitRepo=''
 ##--declare	gitRoot=''
 ##--declare	gitUserName=''
+declare dcPassword=''
 
 function ProcessArguments # see below for the options
 {
@@ -75,49 +76,69 @@ function ProcessArguments # see below for the options
 	local gitRepoNext=false
 	local gitRootNext=false
 	local gitUserNext=false
+	local dcPasswordNext=false
 	while [ $# -gt 0 ]; do
 		[ "$1" = '-gitemail' ] && gitEmailNext=true && shift && continue
 		[ "$1" = '-gitpass' ] && gitPassNext=true && shift && continue
 		[ "$1" = '-gitrepo' ] && gitRepoNext=true && shift && continue
 		[ "$1" = '-gitroot' ] && gitRootNext=true && shift && continue
 		[ "$1" = '-gituser' ] && gitUserNext=true && shift && continue
+		[ "$1" = '-dcpass' ] && dcPasswordNext=true && shift && continue
 		$gitEmailNext && gitEmail="$1" && gitEmailNext=false && shift && continue
 		$gitPassNext && gitPassword="$1" && gitPassNext=false && shift && continue
 		$gitRepoNext && gitRepo="$1" && gitRepoNext=false && shift && continue
 		$gitRootNext && gitRoot="$1" && gitRootNext=false && shift && continue
 		$gitUserNext && gitUserName="$1" && gitUserNext=false && shift && continue
+		$dcPasswordNext && dcPassword="$1" && dcPasswordNext=false && shift && continue
 	done
 
-	if [ "$gitEmail" = '' ]; then
-		echo "-gitemail is missing"
+	##--if [ "$gitEmail" = '' ]; then
+	##--	echo "-gitemail is missing"
+	##--	exit $EXIT_ERROR
+	##--fi
+
+	##--if [ "$gitPassword" = '' ]; then
+	##--	echo "-gitpass is missing"
+	##--	exit $EXIT_ERROR
+	##--fi
+
+	##--if [ "$gitRepo" = '' ]; then
+	##--	echo "-gitrepo is missing"
+	##--	exit $EXIT_ERROR
+	##--fi
+
+	##--if [ "$gitRoot" = '' ]; then
+	##--	echo "-gitroot is missing"
+	##--	exit $EXIT_ERROR
+	##--fi
+
+	##--if [ "$gitUserName" = '' ]; then
+	##--	echo "-gituser is missing"
+	##--	exit $EXIT_ERROR
+	##--fi
+
+	if [ "$dcPassword" = '' ]; then
+		echo "-dcpass is missing"
 		exit $EXIT_ERROR
 	fi
 
-	if [ "$gitPassword" = '' ]; then
-		echo "-gitpass is missing"
-		exit $EXIT_ERROR
-	fi
+	##--echo "-gitemail: $gitEmail"
+	##--echo "-gitpass:  $gitPassword"
+	##--echo "-gitrepo:  $gitRepo"
+	##--echo "-gitroot:  $gitRoot"
+	##--echo "-gituser:  $gitUserName"
+	echo "-dcpass:  $dcPassword"
+}
 
-	if [ "$gitRepo" = '' ]; then
-		echo "-gitrepo is missing"
-		exit $EXIT_ERROR
-	fi
+function WaitForTimeSet
+{
+	echo "waiting for time to be set"
 
-	if [ "$gitRoot" = '' ]; then
-		echo "-gitroot is missing"
-		exit $EXIT_ERROR
-	fi
-
-	if [ "$gitUserName" = '' ]; then
-		echo "-gituser is missing"
-		exit $EXIT_ERROR
-	fi
-
-	echo "-gitemail: $gitEmail"
-	echo "-gitpass:  $gitPassword"
-	echo "-gitrepo:  $gitRepo"
-	echo "-gitroot:  $gitRoot"
-	echo "-gituser:  $gitUserName"
+	EPOCH="UTC 1970"
+	while [[ `date` == *"$EPOCH"* ]]; do
+		echo -n '.'
+		sleep 1
+	done
 }
 
 #====================================================
@@ -126,7 +147,9 @@ function ProcessArguments # see below for the options
 # We assume we're starting after 01-install-os
 #====================================================
 
-##-- not needed ProcessArguments "$@"
+ProcessArguments "$@"
+
+WaitForTimeSet
 
 opkg update
 
@@ -148,15 +171,12 @@ echo ====================================
 #
 mkdir /home
 mkdir /home/pi
+mkdir /home/pi/iipzy-encrypt-a
 mkdir /home/pi/iipzy-service-a
-mkdir /home/pi/iipzy-service-b
 mkdir /home/pi/iipzy-sentinel-web-a
-mkdir /home/pi/iipzy-sentinel-web-b
 mkdir /home/pi/iipzy-sentinel-admin-a
-mkdir /home/pi/iipzy-sentinel-admin-b
 mkdir /home/pi/iipzy-updater-a
-mkdir /home/pi/iipzy-updater-b
-mkdir /home/pi/iipzy-updater-config
+mkdir /home/pi/iipzy-tc-a
 cd /home/pi/iipzy-service-a
 # 
 ##--echo ====================================
@@ -197,12 +217,13 @@ echo "node version: $(node -v)"
 echo ====================================
 # 
 npm config set package-lock false
+npm config set loglevel warn
 # 
 echo ====================================
 echo Install static web server
 echo ====================================
 #
-npm install -g serve
+npm install -g serve 2> /dev/null
 #
 echo ====================================
 echo Create directories.
@@ -218,64 +239,61 @@ echo ====================================
 # 
 mkdir /etc/iipzy
 chmod 777 /etc/iipzy
-echo '{"serverAddress":"iipzy.net:8001"}' > /etc/iipzy/iipzy.json
+echo  '{' > /etc/iipzy/iipzy.json
+echo  '  "serverAddress":"iipzy.net:8001"' >> /etc/iipzy/iipzy.json
+echo  '}' >> /etc/iipzy/iipzy.json
+#
+#
+echo ====================================
+echo Install iipzy-encrypt
+echo ====================================
+# 
+cd /home/pi/iipzy-encrypt-a
+git clone -q "http://github.com/KRobesky/iipzy-encrypt.git"
+# 
+# install iipzy-encrypt stuff
+# 
+cd /home/pi/iipzy-encrypt-a/iipzy-encrypt
+npm i 2> /dev/null
 #
 echo ====================================
 echo Install iipzy-pi
 echo ====================================
-#				   `
+#
 cd /home/pi/iipzy-service-a
-git clone "http://github.com/KRobesky/iipzy-shared.git"
-git clone "http://github.com/KRobesky/iipzy-pi.git"
-
+git clone -q "http://github.com/KRobesky/iipzy-shared.git"
+git clone -q "http://github.com/KRobesky/iipzy-pi.git"
 # 
 # install iipzy-pi stuff
 # 
 cd /home/pi/iipzy-service-a
 # 
 cd /home/pi/iipzy-service-a/iipzy-shared
-npm i
+npm i 2> /dev/null
 cd /home/pi/iipzy-service-a/iipzy-pi
-npm i
+npm i 2> /dev/null
 #
 echo ====================================
-echo Install iipzy-sentinel-web-build
+echo Install iipzy-sentinel-web
 echo ====================================
 # 
 cd /home/pi/iipzy-sentinel-web-a
-git clone "http://github.com/KRobesky/iipzy-sentinel-web-build.git"
-##//??# 
-##//??# install  iipzy-sentinel-web stuff
-##//??# 
-##//??cd /home/pi/iipzy-sentinel-web-a/iipzy-shared
-##//??npm i
-##//??cd /home/pi/iipzy-sentinel-web-a/iipzy-sentinel-web
-##//??npm i
-##//??#
-##//??echo ====================================
-##//??echo Build Sentinel-Web
-##//??echo ====================================						 
-##//??# 
-##//??npm run build
-##//??# 
-##//??# 	- test
-##//??# 
-##//??# 	npm start
-##//??# 
+git clone -q "http://github.com/KRobesky/iipzy-sentinel-web.git"
+#
 echo ====================================
 echo Install iipzy-sentinel-admin
 echo ====================================
 # 
 cd /home/pi/iipzy-sentinel-admin-a
-git clone "http://github.com/KRobesky/iipzy-shared.git"
-git clone "http://github.com/KRobesky/iipzy-sentinel-admin.git"
+git clone -q "http://github.com/KRobesky/iipzy-shared.git"
+git clone -q "http://github.com/KRobesky/iipzy-sentinel-admin.git"
 # 
 # install  iipzy-sentinel-admin stuff
 # 
 cd /home/pi/iipzy-sentinel-admin-a/iipzy-shared
-npm i
+npm i 2> /dev/null
 cd /home/pi/iipzy-sentinel-admin-a/iipzy-sentinel-admin
-npm i
+npm i 2> /dev/null
 # 
 # 	- test
 # 
@@ -286,16 +304,34 @@ echo Install iipzy-updater
 echo ====================================
 # 
 cd /home/pi/iipzy-updater-a
-git clone "http://github.com/KRobesky/iipzy-shared.git"
-git clone "http://github.com/KRobesky/iipzy-updater.git"
+git clone -q "http://github.com/KRobesky/iipzy-shared.git"
+git clone -q "http://github.com/KRobesky/iipzy-updater.git"
 # 
 # install  iipzy-updater stuff
 # 
 cd /home/pi/iipzy-updater-a/iipzy-shared
-npm i
+npm i 2> /dev/null
 cd /home/pi/iipzy-updater-a/iipzy-updater
-npm i
-
+npm i 2> /dev/null
+#
+echo ====================================
+echo Install iipzy-tc
+echo ====================================
+# 
+cd /home/pi/iipzy-tc-a
+git clone -q "http://github.com/KRobesky/iipzy-shared.git"
+git clone -q "http://github.com/KRobesky/iipzy-tc.git"
+# 
+# install  iipzy-tc stuff
+# 
+cd /home/pi/iipzy-tc-a/iipzy-shared
+npm i 2> /dev/null
+cd /home/pi/iipzy-tc-a/iipzy-tc
+node /home/pi/iipzy-encrypt-a/iipzy-encrypt/src/index.js -d -in src.sec -out src.tar -p $dcPassword
+tar -xvf src.tar
+rm -f src.sec
+rm -f src.tar
+npm i 2> /dev/null
 # 
 # 	- test
 # 
@@ -332,7 +368,7 @@ cd /home/pi/iipzy-service-a/iipzy-pi
 # 
 #//?? already installed - opkg install libpcap-dev
 # 
-#//?? fails  2023-03-03 npm i pcap
+#//?? fails  2023-03-03 npm i 2> /dev/null pcap
 #//?? installed by 01-install-os.sh opkg install arp-scan
 #//?? not needed - opkg install nbtscan
 # 
@@ -368,9 +404,9 @@ echo ===================================
 echo Install Sentinel-web services
 echo =================================== 
 # 
-cd /home/pi/iipzy-sentinel-web-a/iipzy-sentinel-web-build/
-cp extraResources/iipzy-sentinel-web-a-openwrt.service $SERVICE_PATH/iipzy-sentinel-web-a.service
-cp extraResources/iipzy-sentinel-web-b-openwrt.service $SERVICE_PATH/iipzy-sentinel-web-b.service
+cd /home/pi/iipzy-sentinel-web-a/iipzy-sentinel-web/
+cp src/extraResources/iipzy-sentinel-web-a-openwrt.service $SERVICE_PATH/iipzy-sentinel-web-a.service
+cp src/extraResources/iipzy-sentinel-web-b-openwrt.service $SERVICE_PATH/iipzy-sentinel-web-b.service
 chmod 777 $SERVICE_PATH/iipzy-sentinel-web-a.service
 chmod 777 $SERVICE_PATH/iipzy-sentinel-web-b.service
 $SERVICE_PATH/iipzy-sentinel-web-a.service enable
@@ -386,9 +422,41 @@ chmod 777 $SERVICE_PATH/iipzy-updater-a.service
 chmod 777 $SERVICE_PATH/iipzy-updater-b.service
 $SERVICE_PATH/iipzy-updater-a.service enable
 # 
+echo =================================== 
+echo Install tc services
+echo =================================== 
+# 
+cd /home/pi/iipzy-tc-a/iipzy-tc
+cp src/extraResources/iipzy-tc-a-openwrt.service $SERVICE_PATH/iipzy-tc-a.service
+cp src/extraResources/iipzy-tc-b-openwrt.service $SERVICE_PATH/iipzy-tc-b.service
+chmod 777 $SERVICE_PATH/iipzy-tc-a.service
+chmod 777 $SERVICE_PATH/iipzy-tc-b.service
+#$SERVICE_PATH/iipzy-tc-a.service enable
+cp src/services/tc-config /usr/sbin/tc-config
+chmod 777 /usr/sbin/tc-config
+# 
+echo =================================== 
+echo Install redis service.
+echo =================================== 
+#
+cd /home/pi/iipzy-service-a/iipzy-pi
+cp src/extraResources/redis-server.service $SERVICE_PATH/redis-server.service
+chmod 777 $SERVICE_PATH/redis-server.service
+$SERVICE_PATH/redis-server.service enable
+# 
+# 
 touch /root/02-install-iipzy-done.txt
 sync
-echo Exiting...
+
+echo =================================== 
+echo =================================== 
+echo =================================== 
+echo Be sure to install tc modules by hand
+echo =================================== 
+echo =================================== 
+echo =================================== 
+
+echo Finishing...
 exit $EXIT_OK
 
 echo =================================== 
@@ -421,7 +489,7 @@ echo ===================================
 echo Change password
 echo =================================== 
 # 
-echo "pi:iipzy" | chpasswd
+#echo "pi:iipzy" | chpasswd
 # 
 echo =================================== 
 echo reboot

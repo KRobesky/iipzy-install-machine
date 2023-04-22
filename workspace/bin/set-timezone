@@ -14,8 +14,8 @@ let arraylim-=1
 echo "arraylim = $arraylim"
 for part in "${!array[@]}"
 do
-	echo "line $part"
-    echo "${array[$part]}"
+	#echo "line $part"
+    #echo "${array[$part]}"
 	zn+="${array[$part]}"
 	if [[ $part -lt $arraylim ]]; then
 		zn+="\\/"
@@ -23,7 +23,7 @@ do
 done
 
 echo "Setting timezone to $tz"
-echo "$1" > /etc/TZ
+echo "$tz" > /etc/TZ
 # change timezone
 sed -i "s/.*option timezone.*/\ \ \ \ \ \ \ \ option timezone \'$tz\'/" /etc/config/system
 echo "Setting zonename to $zn"

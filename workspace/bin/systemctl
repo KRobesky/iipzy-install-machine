@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+	echo -e "\tusage:   systemctl action service-name"
+	echo -e "\texample: systemctl restart iipzy-pi-a"
+	exit 1
+fi
+
+action=$1
+service=$2
+/etc/init.d/$service.service $action
+

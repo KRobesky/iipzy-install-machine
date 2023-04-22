@@ -140,6 +140,7 @@ function InstallNeededPackages
 	opkg install procps-ng-vmstat
 	opkg install tcpdump
 	opkg install zoneinfo-all
+	opkg install ip6tables
 
 	# -- tar that works
 	echo =================================== 
@@ -500,6 +501,7 @@ function SetupTimezone #
 {
 	echo 'Setting up timezone to UTC'
 	cp -p /etc/config/system /etc/config/system.ORG
+	unlink /etc/TZ
 	echo 'UTC' > /etc/TZ
 	# change timezone to UTC
 	sed -i "s/.*option timezone.*/\ \ \ \ \ \ \ \ option timezone 'UTC'/" /etc/config/system

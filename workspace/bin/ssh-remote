@@ -1,0 +1,39 @@
+#!/bin/bash 
+# Copyright 2021 Maya Global Solutions Incorporated
+#
+# This source code is proprietary and confidential. No part of
+# this source code may be disclosed in any manner to a third
+# party without the prior written consent of Inspeed Networks
+# Incorporated. 
+
+# Maya ssh-remote service
+#
+declare user="tunnel"
+declare server="iipzy.net"
+declare port=$2
+declare password=$3
+
+if [[ "$1" == "--command-line" ]]; then
+	echo "sshpass -p $password ssh -tt -R$port:localhost:22 $user@$server"
+elif [[ "$1" == "--start-message" ]]; then
+	echo -e "remote ssh started for $user@$server, port $port.  Use: \"ssh -p$port localhost\" on $server.\n\nThe ssh session will automatically close in $3 minutes."
+elif [[ "$1" == "--kill-ssh" ]]; then
+	#psSearch="sshpass -p xxxxxxxxxxx ssh -tt -R"
+	psSearch="sshpass -p xxxxxxxxxxx ssh -tt -R$port:localhost:22 $user@$server"
+	#echo "killing: $psSearch"
+	psLine=$( ps -Af --no-headers | grep "$psSearch" | grep -v java | grep -v grep )
+	# psLine: root       900   801  0 22:43 ?        00:00:00 ssh -tt -R8145:localhost:22 root@portal.iipzy.com
+	#echo "psLine: $psLine"
+	psa=()
+	IFS=$' ' read -r -a psa <<< "$psLine"
+	pid=${psa[1]}
+	if [[ $pid ]]; then
+		#echo "pid: $pid"
+		kill -9 $pid
+		echo "stopped: $pid"
+	else
+		echo "nothing to stop"
+	fi
+else
+	echo "usage: --command-line || --start-message <mins-until-closed> || --kill-ssh"
+fi

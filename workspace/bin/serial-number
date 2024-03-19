@@ -1,3 +1,17 @@
 #!/bin/bash
-echo -n $(cut -c 1-16 <<<  cat /sys/firmware/devicetree/base/serial-number)
+declare -r    SERIAL_NUMBER_FILE='/etc/serial-number'
+
+if [ -f "$SERIAL_NUMBER_FILE" ]; then
+    echo -n $(cat $SERIAL_NUMBER_FILE)
+    exit 0
+fi
+
+# create
+echo -n $(uuidgen > $SERIAL_NUMBER_FILE)
+
+# set to read-only
+chmod 444 $SERIAL_NUMBER_FILE
+echo -n $(cat $SERIAL_NUMBER_FILE)
+exit 0
+
 

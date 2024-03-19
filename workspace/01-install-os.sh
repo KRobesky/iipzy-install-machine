@@ -141,6 +141,7 @@ function InstallNeededPackages
 	opkg install tcpdump
 	opkg install zoneinfo-all
 	opkg install ip6tables
+	opkg install sshpass
 
 	# -- tar that works
 	echo =================================== 

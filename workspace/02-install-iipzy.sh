@@ -1,63 +1,5 @@
 #!/bin/bash
-# Get image from https://www.raspberrypi.org/downloads/raspbian/ -- lite
-# 
-# Use DISKPART to initialize sd card
-# 
-# 	diskpart
-# 	>list disk
-# 	>select disk n
-# 	>list disk
-# 	>clean
-# 	>list disk
-# 	>create partition primary
-# 	>list disk
-# 	>exit
-# 
-# Use balenaEtcher to flash image to micro sd.
-# 
-# ====================================
-# Enable SSH using connected keyboard and monitor/
-# 	see https://www.raspberrypi.org/documentation/remote-access/ssh/
-# ====================================
-# 
-# 	sudo systemctl enable ssh
-# 	sudo systemctl start ssh
-#	- note address.
-#	ip addr
-# 
-# ====================================
-# After this, use ssh
-# ====================================
-# 
-# ====================================
-# Install git
-# ====================================
-#
-# fix up <username:password>@<git-repository> in the git clone request below.
-#
-#	sudo apt-get update
-#
-# 	sudo apt-get install git -y
-# 
-# 	git config --global user.name "User Name"
-# 	git config --global user.email email@x.y
-# 
-# 	pwd
-# 	/home/pi
-# 	mkdir /home/pi/iipzy-service-a
-# 	cd /home/pi/iipzy-service-a
-# 	git init
-# 	git remote add origin http://192.168.1.65/Bonobo.Git.Server/iipzy-pi
-# 
-# Get this install script
-# 
-# 	git clone -q http://<username:password>@<git-repository>/iipzy-configs-private.git
-# 
-# ====================================
-# Run this script
-# ====================================
-# 	/bin/bash /home/pi/iipzy-service-a/iipzy-configs-private/iipzy-pi-config/ApplianceInitialSetup.sh
-# 
+
 declare -r -i EXIT_ERROR=1
 declare -r -i EXIT_OK=0
 declare -r	  SERVICE_PATH="/etc/init.d/"
@@ -171,13 +113,14 @@ echo ====================================
 #
 mkdir /home
 mkdir /home/pi
+mkdir /home/pi/iipzy-core-a
 mkdir /home/pi/iipzy-encrypt-a
-mkdir /home/pi/iipzy-service-a
 mkdir /home/pi/iipzy-sentinel-web-a
+mkdir /home/pi/iipzy-sentinel-web-client-proxy-a
 mkdir /home/pi/iipzy-sentinel-admin-a
 mkdir /home/pi/iipzy-updater-a
 mkdir /home/pi/iipzy-tc-a
-cd /home/pi/iipzy-service-a
+cd /home/pi/iipzy-core-a
 # 
 ##--echo ====================================
 ##--echo Install unzip
@@ -240,7 +183,10 @@ echo ====================================
 mkdir /etc/iipzy
 chmod 777 /etc/iipzy
 echo  '{' > /etc/iipzy/iipzy.json
-echo  '  "serverAddress":"iipzy.net:8001"' >> /etc/iipzy/iipzy.json
+if [ ! -z "$dcPassword" ]; then
+	echo  "  \"dcPassword\":\"$dcPassword\"," >> /etc/iipzy/iipzy.json
+fi
+echo  '  "serverAddress":"iipzy.net"' >> /etc/iipzy/iipzy.json
 echo  '}' >> /etc/iipzy/iipzy.json
 #
 #
@@ -257,20 +203,20 @@ cd /home/pi/iipzy-encrypt-a/iipzy-encrypt
 npm i 2> /dev/null
 #
 echo ====================================
-echo Install iipzy-pi
+echo Install iipzy-core
 echo ====================================
 #
-cd /home/pi/iipzy-service-a
+cd /home/pi/iipzy-core-a
 git clone -q "http://github.com/KRobesky/iipzy-shared.git"
-git clone -q "http://github.com/KRobesky/iipzy-pi.git"
+git clone -q "http://github.com/KRobesky/iipzy-core.git"
 # 
-# install iipzy-pi stuff
+# install iipzy-core stuff
 # 
-cd /home/pi/iipzy-service-a
+cd /home/pi/iipzy-core-a
 # 
-cd /home/pi/iipzy-service-a/iipzy-shared
+cd /home/pi/iipzy-core-a/iipzy-shared
 npm i 2> /dev/null
-cd /home/pi/iipzy-service-a/iipzy-pi
+cd /home/pi/iipzy-core-a/iipzy-core
 npm i 2> /dev/null
 #
 echo ====================================
@@ -280,6 +226,21 @@ echo ====================================
 cd /home/pi/iipzy-sentinel-web-a
 git clone -q "http://github.com/KRobesky/iipzy-sentinel-web.git"
 #
+echo ====================================
+echo Install iipzy-sentinel-web-client-proxy
+echo ====================================
+# 
+cd /home/pi/iipzy-sentinel-web-client-proxy-a
+git clone -q "http://github.com/KRobesky/iipzy-shared.git"
+git clone -q "http://github.com/KRobesky/iipzy-sentinel-web-client-proxy.git"
+# 
+# install  iipzy-sentinel-web-client-proxy stuff
+# 
+cd /home/pi/iipzy-sentinel-web-client-proxy-a/iipzy-shared
+npm i 2> /dev/null
+cd /home/pi/iipzy-sentinel-web-client-proxy-a/iipzy-sentinel-web-client-proxy
+npm i 2> /dev/null
+
 echo ====================================
 echo Install iipzy-sentinel-admin
 echo ====================================
@@ -314,24 +275,28 @@ npm i 2> /dev/null
 cd /home/pi/iipzy-updater-a/iipzy-updater
 npm i 2> /dev/null
 #
-echo ====================================
-echo Install iipzy-tc
-echo ====================================
-# 
-cd /home/pi/iipzy-tc-a
-git clone -q "http://github.com/KRobesky/iipzy-shared.git"
-git clone -q "http://github.com/KRobesky/iipzy-tc.git"
-# 
-# install  iipzy-tc stuff
-# 
-cd /home/pi/iipzy-tc-a/iipzy-shared
-npm i 2> /dev/null
-cd /home/pi/iipzy-tc-a/iipzy-tc
-node /home/pi/iipzy-encrypt-a/iipzy-encrypt/src/index.js -d -in src.sec -out src.tar -p $dcPassword
-tar -xvf src.tar
-rm -f src.sec
-rm -f src.tar
-npm i 2> /dev/null
+echo =================================== 
+
+if [ ! -z "$dcPassword" ]; then
+	echo ====================================
+	echo Install iipzy-tc
+	echo ====================================
+	# 
+	cd /home/pi/iipzy-tc-a
+	git clone -q "http://github.com/KRobesky/iipzy-shared.git"
+	git clone -q "http://github.com/KRobesky/iipzy-tc.git"
+	# 
+	# install  iipzy-tc stuff
+	# 
+	cd /home/pi/iipzy-tc-a/iipzy-shared
+	npm i 2> /dev/null
+	cd /home/pi/iipzy-tc-a/iipzy-tc
+	node /home/pi/iipzy-encrypt-a/iipzy-encrypt/src/index.js -d -in src.sec -out src.tar -p $dcPassword
+	tar -xvf src.tar
+	rm -f src.sec
+	rm -f src.tar
+	npm i 2> /dev/null
+fi
 # 
 # 	- test
 # 
@@ -358,11 +323,11 @@ echo ====================================
 # 		        up ifconfig eth0 promisc up
 # 		        down ifconfig eth0 promisc down
 # 
-#//?? cp /home/pi/iipzy-service-a/iipzy-pi/src/extraResources/interfaces /etc/network/interfaces
+#//?? cp /home/pi/iipzy-core-a/iipzy-core/src/extraResources/interfaces /etc/network/interfaces
 # 
-# For Bonjour monitoring in iipzy-pi
+# For Bonjour monitoring in iipzy-core
 # 
-cd /home/pi/iipzy-service-a/iipzy-pi
+cd /home/pi/iipzy-core-a/iipzy-core
 # 
 # 	- install libpcap-dev
 # 
@@ -382,12 +347,12 @@ echo ===================================
 echo Install Sentinel services.
 echo =================================== 
 #
-cd /home/pi/iipzy-service-a/iipzy-pi
-cp src/extraResources/iipzy-pi-a-openwrt.service $SERVICE_PATH/iipzy-pi-a.service
-cp src/extraResources/iipzy-pi-b-openwrt.service $SERVICE_PATH/iipzy-pi-b.service
-chmod 777 $SERVICE_PATH/iipzy-pi-a.service
-chmod 777 $SERVICE_PATH/iipzy-pi-b.service
-$SERVICE_PATH/iipzy-pi-a.service enable
+cd /home/pi/iipzy-core-a/iipzy-core
+cp src/extraResources/iipzy-core-a-openwrt.service $SERVICE_PATH/iipzy-core-a.service
+cp src/extraResources/iipzy-core-b-openwrt.service $SERVICE_PATH/iipzy-core-b.service
+chmod 777 $SERVICE_PATH/iipzy-core-a.service
+chmod 777 $SERVICE_PATH/iipzy-core-b.service
+$SERVICE_PATH/iipzy-core-a.service enable
 # 
 echo =================================== 
 echo Install Sentinel Admin services
@@ -412,6 +377,18 @@ chmod 777 $SERVICE_PATH/iipzy-sentinel-web-b.service
 $SERVICE_PATH/iipzy-sentinel-web-a.service enable
 # 
 echo =================================== 
+echo Install Sentinel-web-client-proxy services
+echo =================================== 
+#
+cd /home/pi/iipzy-sentinel-web-client-proxy-a/iipzy-sentinel-web-client-proxy 
+cp src/extraResources/iipzy-sentinel-web-client-proxy-a-openwrt.service $SERVICE_PATH/iipzy-sentinel-web-client-proxy-a.service
+cp src/extraResources/iipzy-sentinel-web-client-proxy-b-openwrt.service $SERVICE_PATH/iipzy-sentinel-web-client-proxy-b.service
+chmod 777 $SERVICE_PATH/iipzy-sentinel-web-client-proxy-a.service
+chmod 777 $SERVICE_PATH/iipzy-sentinel-web-client-proxy-b.service
+$SERVICE_PATH/iipzy-sentinel-web-client-proxy-a.service enable
+# 
+
+echo =================================== 
 echo Install Updater services
 echo =================================== 
 # 
@@ -422,127 +399,49 @@ chmod 777 $SERVICE_PATH/iipzy-updater-a.service
 chmod 777 $SERVICE_PATH/iipzy-updater-b.service
 $SERVICE_PATH/iipzy-updater-a.service enable
 # 
-echo =================================== 
-echo Install tc services
-echo =================================== 
-# 
-cd /home/pi/iipzy-tc-a/iipzy-tc
-cp src/extraResources/iipzy-tc-a-openwrt.service $SERVICE_PATH/iipzy-tc-a.service
-cp src/extraResources/iipzy-tc-b-openwrt.service $SERVICE_PATH/iipzy-tc-b.service
-chmod 777 $SERVICE_PATH/iipzy-tc-a.service
-chmod 777 $SERVICE_PATH/iipzy-tc-b.service
-#$SERVICE_PATH/iipzy-tc-a.service enable
-cp src/services/tc-config /usr/sbin/tc-config
-chmod 777 /usr/sbin/tc-config
+if [ ! -z "$dcPassword" ]; then
+	echo =================================== 
+	echo Install tc services
+	echo =================================== 
+	# 
+	cd /home/pi/iipzy-tc-a/iipzy-tc
+	cp src/extraResources/iipzy-tc-a-openwrt.service $SERVICE_PATH/iipzy-tc-a.service
+	cp src/extraResources/iipzy-tc-b-openwrt.service $SERVICE_PATH/iipzy-tc-b.service
+	chmod 777 $SERVICE_PATH/iipzy-tc-a.service
+	chmod 777 $SERVICE_PATH/iipzy-tc-b.service
+	#$SERVICE_PATH/iipzy-tc-a.service enable
+	cp src/services/tc-config /usr/sbin/tc-config
+	chmod 777 /usr/sbin/tc-config
+fi
 # 
 echo =================================== 
 echo Install redis service.
 echo =================================== 
 #
-cd /home/pi/iipzy-service-a/iipzy-pi
+cd /home/pi/iipzy-core-a/iipzy-core
 cp src/extraResources/redis-server.service $SERVICE_PATH/redis-server.service
 chmod 777 $SERVICE_PATH/redis-server.service
 $SERVICE_PATH/redis-server.service enable
 # 
+echo =================================== 
+echo Install for RemoteSSH
+echo =================================== 
+#
+opkg install sshpass
+cp -f /root/workspace/bin/ssh-remote /usr/bin/ssh-remote
+chmod 777 /usr/bin/ssh-remote
+cp -f /root/workspace/dot_ssh/known_hosts /root/.ssh/known_hosts
+chmod 0644 /root/.ssh/known_hosts
 # 
 touch /root/02-install-iipzy-done.txt
 sync
 
 echo =================================== 
+echo Enable tc
 echo =================================== 
-echo =================================== 
-echo Be sure to install tc modules by hand
-echo =================================== 
-echo =================================== 
-echo =================================== 
+if [ ! -z "$dcPassword" ]; then
+	tc-config -e
+fi
 
 echo Finishing...
 exit $EXIT_OK
-
-echo =================================== 
-echo Verify installation
-echo =================================== 
-# check iipzy logs directory
-# 
-ls -l /var/log/iipzy/
-# 
-# 	you should see something like...
-# 
-# 	total 3404
-# 	-rw-r--r-- 1 pi pi 1745931 Oct  3 00:31 iipzy-pi-2019-10-03-00.log
-# 	-rw-r--r-- 1 pi pi 1719438 Oct  3 00:31 iipzy-pi.log
-# 	-rw-r--r-- 1 pi pi    3114 Oct  3 00:31 iipzy-updater-2019-10-03-00.log
-# 	-rw-r--r-- 1 pi pi    3114 Oct  3 00:31 iipzy-updater.log
-# 
-echo =================================== 
-echo Remove secret stuff
-echo =================================== 
-# 
-rm -r -f cp /home/pi/iipzy-service-a/iipzy-configs-private
-# 
-#  check that services are running
-# 	ps -Af | grep iipzy
-# 	pi        8000     1 23 00:21 ?        00:00:05 /usr/bin/node /home/pi/iipzy-service-a/iipzy-pi/src/index.js
-# 	pi        8409   787  0 00:22 pts/0    00:00:00 grep --color=auto iipzy
-# 
-echo =================================== 
-echo Change password
-echo =================================== 
-# 
-#echo "pi:iipzy" | chpasswd
-# 
-echo =================================== 
-echo reboot
-echo =================================== 
-# 
-reboot
-# 
-# ====================================
-# 
-# Before shipping AND/OR making an image.
-#
-# 	- stop services.  Note which of "a" or "b" service is active (e.g., "iipzy-pi-a" vs "iipzy-pi-b")
-#
-# 	ps -Af | grep iipzy
-# 	pi        1026     1  0 14:43 ?        00:00:05 /usr/bin/node /home/pi/iipzy-updater-b/iipzy-updater/src/index.js
-# 	pi        2161     1  2 15:02 ?        00:01:04 /usr/bin/node /home/pi/iipzy-service-b/iipzy-pi/src/index.js
-# 	pi        4924 27819  0 15:51 pts/0    00:00:00 grep --color=auto iipzy
-#
-#	systemctl stop iipzy-updater-b
-#	systemctl stop iipzy-pi-b
-# 	
-# 	- remove state files from /etc/iipzy
-# 	
-# 	rm -r -f /etc/iipzy/*
-# 	
-# 	- initialize /etc/iipzy/iipzy.json
-# 
-#   echo '{"serverAddress":"iipzy.net:8001"}' > /etc/iipzy/iipzy_perm.json
-# 
-# 	- remove log files from /var/logs/iipzy/.
-#
-#	rm -r -f /var/log/iipzy/*
-#
-#	- change password
-#
-#	echo "pi:iipzy" | chpasswd
-#
-#	- zero out to minimize compressed size.  THIS TAKES A LONG TIME. ~30 minutes
-#
-#	opkg autoremove -y
-#	opkg clean -y
-#	cat /dev/zero >> zero.file;sync;rm zero.file;date
-# 
-# 	shutdown
-# 
-# ====================================
-#
-# Create archive of pi image
-#
-# ====================================
-#
-# Use Win32DiskImager to copy image from micro-sd card --> iipzy-server\RPI-images\iipzypi.img
-#
-# Use 7-zip to compress the .img file.
-#
-
